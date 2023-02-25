@@ -1,6 +1,0 @@
-add_subdirectory(callbacks)
-add_subdirectory(qtmidieditor)
-add_subdirectory(qtmidiplayer)
-add_subdirectory(player_async)
-add_subdirectory(player_sync)
-add_subdirectory(sequencing)
