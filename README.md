@@ -33,3 +33,9 @@
 
 目前支持：
 - [PianoTranScription](https://github.com/bytedance/piano_transcription)
+
+## 依赖列表
+- [FFmpeg](https://ffmpeg.org/)
+- [World](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
+- [rapidJson](https://github.com/Tencent/rapidjson) 
+- [cxxmidi](https://github.com/5tan/cxxmidi)
