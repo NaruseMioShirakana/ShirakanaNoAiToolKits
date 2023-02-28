@@ -68,11 +68,11 @@ public:
 
 	virtual ~PianoTranScription();
 
+	void Infer(const std::wstring& _path, int64_t batch_size = 1) const override;
+
 	midi_events frame_to_note_info(const std::vector<std::vector<float>>& frame_output, const std::vector<std::vector<float>>& offset_output, const std::vector<std::vector<float>>& velocity_output) const;
 
 	std::vector<float> load_audio(const std::wstring& _path) const;
-
-	cxxmidi::File Infer(const std::wstring& _path, int64_t batch_size = 1) const;
 
 	midi_events toMidiEvents(NetOutPuts& output_dict) const;
 
@@ -106,10 +106,9 @@ private:
 	std::vector<const char*> outputNames = { "frame_output", "reg_onset_output", "reg_offset_output", "velocity_output", "reg_pedal_onset_output", "reg_pedal_offset_output", "pedal_frame_output" };
 };
 
+// operators used to sort
 bool operator<(const PianoTranScription::est_note_tp& a, const PianoTranScription::est_note_tp& b);
-
 bool operator<(const PianoTranScription::MidiEvent& a, const PianoTranScription::MidiEvent& b);
-
 PianoTranScription::est_note_tp operator+(const PianoTranScription::est_note_tp& a, const PianoTranScription::est_note_tp& b);
 
 INFERCLASSEND

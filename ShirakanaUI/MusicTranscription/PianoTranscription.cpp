@@ -1,5 +1,4 @@
 #include "PianoTranscription.hpp"
-#include "../Helper/Helper.h"
 #include <algorithm>
 
 INFERCLASSHEADER
@@ -7,41 +6,34 @@ INFERCLASSHEADER
 PianoTranScription::PianoTranScription(const rapidjson::Document& _config, const callback& _cb)
 {
 	const std::wstring _path = GetCurrentFolder() + L"\\Models\\" + to_wide_string(_config["folder"].GetString()) + L"\\";
-	try
-	{
-		if(!_config["sample_rate"].IsNull())
-			sample_rate = _config["sample_rate"].GetInt();
-		if (!_config["classes_num"].IsNull())
-			classes_num = _config["classes_num"].GetInt();
-		if (!_config["begin_note"].IsNull())
-			begin_note = _config["begin_note"].GetInt();
-		if (!_config["segment_seconds"].IsNull())
-			segment_seconds = _config["segment_seconds"].GetFloat();
-		if (!_config["hop_seconds"].IsNull())
-			hop_seconds = _config["hop_seconds"].GetFloat();
-		if (!_config["frames_per_second"].IsNull())
-			frames_per_second = _config["frames_per_second"].GetFloat();
-		if (!_config["velocity_scale"].IsNull())
-			velocity_scale = _config["velocity_scale"].GetInt();
-		if (!_config["segment_len"].IsNull())
-			segment_samples = _config["segment_len"].GetInt();
-		if (!_config["onset_threshold"].IsNull())
-			onset_threshold = _config["onset_threshold"].GetDouble();
-		if (!_config["offset_threshold"].IsNull())
-			offset_threshold = _config["offset_threshold"].GetDouble();
-		if (!_config["frame_threshold"].IsNull())
-			frame_threshold = _config["frame_threshold"].GetDouble();
-		if (!_config["use_org_method"].IsNull())
-			use_org_method = _config["use_org_method"].GetBool();
-		if (!_config["onset_ali"].IsNull())
-			onset_ali = _config["onset_ali"].GetInt();
-		if (!_config["offset_ali"].IsNull())
-			offset_ali = _config["offset_ali"].GetInt();
-	}
-	catch(const std::exception& e)
-	{
-		throw e;
-	}
+	if(!_config["sample_rate"].IsNull())
+		sample_rate = _config["sample_rate"].GetInt();
+	if (!_config["classes_num"].IsNull())
+		classes_num = _config["classes_num"].GetInt();
+	if (!_config["begin_note"].IsNull())
+		begin_note = _config["begin_note"].GetInt();
+	if (!_config["segment_seconds"].IsNull())
+		segment_seconds = _config["segment_seconds"].GetFloat();
+	if (!_config["hop_seconds"].IsNull())
+		hop_seconds = _config["hop_seconds"].GetFloat();
+	if (!_config["frames_per_second"].IsNull())
+		frames_per_second = _config["frames_per_second"].GetFloat();
+	if (!_config["velocity_scale"].IsNull())
+		velocity_scale = _config["velocity_scale"].GetInt();
+	if (!_config["segment_len"].IsNull())
+		segment_samples = _config["segment_len"].GetInt();
+	if (!_config["onset_threshold"].IsNull())
+		onset_threshold = _config["onset_threshold"].GetDouble();
+	if (!_config["offset_threshold"].IsNull())
+		offset_threshold = _config["offset_threshold"].GetDouble();
+	if (!_config["frame_threshold"].IsNull())
+		frame_threshold = _config["frame_threshold"].GetDouble();
+	if (!_config["use_org_method"].IsNull())
+		use_org_method = _config["use_org_method"].GetBool();
+	if (!_config["onset_ali"].IsNull())
+		onset_ali = _config["onset_ali"].GetInt();
+	if (!_config["offset_ali"].IsNull())
+		offset_ali = _config["offset_ali"].GetInt();
 	try
 	{
 		PianoTranScriptionModel = new Ort::Session(*env, (_path + L"model.onnx").c_str(), *session_options);
@@ -59,6 +51,7 @@ PianoTranScription::~PianoTranScription()
 	PianoTranScriptionModel = nullptr;
 }
 
+// debug fn
 std::vector<float> PianoTranScription::load_debug_npy()
 {
 	FILE* debug_file = nullptr;
@@ -73,6 +66,7 @@ std::vector<float> PianoTranScription::load_debug_npy()
 	return debug_data;
 }
 
+// write midi events vector to midi file
 cxxmidi::File write_events_to_midi(long start_time, const PianoTranScription::midi_events& _midi_events)
 {
 	constexpr long ticks_per_beat = 384;
@@ -110,46 +104,8 @@ cxxmidi::File write_events_to_midi(long start_time, const PianoTranScription::mi
 	return my_file;
 }
 
-bool operator<(const PianoTranScription::MidiEvent& a, const PianoTranScription::MidiEvent& b)
-{
-	return a.time < b.time;
-}
-
-PianoTranScription::midi_events PianoTranScription::frame_to_note_info(const std::vector<std::vector<float>>& frame_output, const std::vector<std::vector<float>>& reg_offset_output, const std::vector<std::vector<float>>& velocity_output) const
-{
-	const auto Temp = get_binarized_output_from_regression(reg_offset_output, float(offset_threshold), offset_ali);
-	const auto offset = std::get<0>(Temp);
-	std::vector<est_note_events> outputs;
-	double onset = 0.0;
-	const long class_size = long(frame_output[0].size()), duration_size = long(frame_output.size());
-	for (long pitch = 0; pitch < class_size; ++pitch)
-	{
-		bool begin = false;
-		for (long duration = 0; duration < duration_size; ++duration)
-		{
-			if (!begin && frame_output[duration][pitch] >= float(frame_threshold))
-			{
-				begin = true;
-				onset = double(duration);
-				continue;
-			}
-			if (begin)
-			{
-				if ((frame_output[duration][pitch] < float(frame_threshold)) ||
-					(double(duration) - onset > 600.0) ||
-					(duration == duration_size - 1) ||
-					(offset[duration][pitch] == 1.0f))
-				{
-					begin = false;
-					outputs.emplace_back(onset / double(frames_per_second), double(duration) / double(frames_per_second), pitch + begin_note, long(velocity_output[long(onset)][pitch] * float(velocity_scale) + 1));
-				}
-			}
-		}
-	}
-	return { std::move(outputs),{} };
-}
-
-cxxmidi::File PianoTranScription::Infer(const std::wstring& _path, int64_t batch_size) const
+// Infer Function
+void PianoTranScription::Infer(const std::wstring& _path, int64_t batch_size) const
 {
 #ifdef MDEBUGFILE
 	auto _data = load_debug_npy();
@@ -242,9 +198,46 @@ cxxmidi::File PianoTranScription::Infer(const std::wstring& _path, int64_t batch
 		midiEvents = frame_to_note_info(netOutputs.frame_output, netOutputs.reg_offset_output, netOutputs.velocity_output);
 	else
 		midiEvents = toMidiEvents(netOutputs);
-	return write_events_to_midi(0, midiEvents);
+	write_events_to_midi(0, midiEvents).SaveAs(to_byte_string(_outputPath + _path.substr(_path.rfind(L'\\'), _path.rfind(L'.')) + std::to_wstring(unsigned long long(_path.data())) + L".mid").c_str());
+	_callback(progress, progressMax);
 }
 
+// detect note info with output dict (MyMethod, and It works better in my software)
+PianoTranScription::midi_events PianoTranScription::frame_to_note_info(const std::vector<std::vector<float>>& frame_output, const std::vector<std::vector<float>>& reg_offset_output, const std::vector<std::vector<float>>& velocity_output) const
+{
+	const auto Temp = get_binarized_output_from_regression(reg_offset_output, float(offset_threshold), offset_ali);
+	const auto offset = std::get<0>(Temp);
+	std::vector<est_note_events> outputs;
+	double onset = 0.0;
+	const long class_size = long(frame_output[0].size()), duration_size = long(frame_output.size());
+	for (long pitch = 0; pitch < class_size; ++pitch)
+	{
+		bool begin = false;
+		for (long duration = 0; duration < duration_size; ++duration)
+		{
+			if (!begin && frame_output[duration][pitch] >= float(frame_threshold))
+			{
+				begin = true;
+				onset = double(duration);
+				continue;
+			}
+			if (begin)
+			{
+				if ((frame_output[duration][pitch] < float(frame_threshold)) ||
+					(double(duration) - onset > 600.0) ||
+					(duration == duration_size - 1) ||
+					(offset[duration][pitch] == 1.0f))
+				{
+					begin = false;
+					outputs.emplace_back(onset / double(frames_per_second), double(duration) / double(frames_per_second), pitch + begin_note, long(velocity_output[long(onset)][pitch] * float(velocity_scale) + 1));
+				}
+			}
+		}
+	}
+	return { std::move(outputs),{} };
+}
+
+// load Audio to sampling rate: sr, dtype: float32
 std::vector<float> PianoTranScription::load_audio(const std::wstring& _path) const
 {
 	const auto audio = AudioPreprocess().codec(_path, sample_rate, false);
@@ -255,6 +248,7 @@ std::vector<float> PianoTranScription::load_audio(const std::wstring& _path) con
 	return _data;
 }
 
+// detect note info with onset offset & frame (Orginal Method)
 std::vector<PianoTranScription::est_note_tp> note_detection_with_onset_offset_regress(
 	const std::vector<std::vector<float>>& frame_output,
 	const std::vector<std::vector<float>>& onset_output,
@@ -323,16 +317,7 @@ std::vector<PianoTranScription::est_note_tp> note_detection_with_onset_offset_re
 	return output_tuples;
 }
 
-bool operator<(const PianoTranScription::est_note_tp& a, const PianoTranScription::est_note_tp& b)
-{
-	return a.bgn < b.bgn;
-}
-
-PianoTranScription::est_note_tp operator+(const PianoTranScription::est_note_tp& a, const PianoTranScription::est_note_tp& b)
-{
-	return { a.bgn + b.bgn,a.fin + b.fin,a.onset_shift + b.onset_shift,a.offset_shift + b.offset_shift,a.normalized_velocity + b.normalized_velocity };
-}
-
+// detect note info with output dict (Orginal Method)
 std::vector<PianoTranScription::est_note_events> PianoTranScription::output_dict_to_detected_notes(const NetOutPuts& output_dict) const
 {
 	const long class_num = long(output_dict.frame_output[0].size());
@@ -373,6 +358,7 @@ std::vector<PianoTranScription::est_note_events> PianoTranScription::output_dict
 //	return {};
 //}
 
+// NetOutputs to MidiEvents (Orginal Method)
 PianoTranScription::midi_events PianoTranScription::toMidiEvents(NetOutPuts& output_dict) const
 {
 	std::vector<est_pedal_events> _pedal;
@@ -386,6 +372,7 @@ PianoTranScription::midi_events PianoTranScription::toMidiEvents(NetOutPuts& out
 	return { std::move(_note),std::move(_pedal) };
 }
 
+// If the class normal distribution is satisfied, return true, else false
 bool is_monotonic_neighbour(const std::vector<std::vector<float>>& x, long n, long neighbour, long k)
 {
 	bool monotonic = true;
@@ -400,6 +387,7 @@ bool is_monotonic_neighbour(const std::vector<std::vector<float>>& x, long n, lo
 	return monotonic;
 }
 
+// Look for Midi events on the timeline
 std::tuple<std::vector<std::vector<float>>, std::vector<std::vector<float>>> PianoTranScription::get_binarized_output_from_regression(const std::vector<std::vector<float>>& reg_output, float threshold, int neighbour)
 {
 	const long frames_num = long(reg_output.size());
@@ -422,4 +410,19 @@ std::tuple<std::vector<std::vector<float>>, std::vector<std::vector<float>>> Pia
 	}
 	return{ binary_output ,shift_output };
 }
+
+// operators used to sort
+bool operator<(const PianoTranScription::est_note_tp& a, const PianoTranScription::est_note_tp& b)
+{
+	return a.bgn < b.bgn;
+}
+bool operator<(const PianoTranScription::MidiEvent& a, const PianoTranScription::MidiEvent& b)
+{
+	return a.time < b.time;
+}
+PianoTranScription::est_note_tp operator+(const PianoTranScription::est_note_tp& a, const PianoTranScription::est_note_tp& b)
+{
+	return { a.bgn + b.bgn,a.fin + b.fin,a.onset_shift + b.onset_shift,a.offset_shift + b.offset_shift,a.normalized_velocity + b.normalized_velocity };
+}
+
 INFERCLASSEND

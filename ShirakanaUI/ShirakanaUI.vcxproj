@@ -178,6 +178,8 @@
     <ClInclude Include="Extend\IconButton.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Helper\Helper.h" />
+    <ClInclude Include="Image-Video\ImgVideo.hpp" />
+    <ClInclude Include="ImageUpScale\ImageUpScale.hpp" />
     <ClInclude Include="Inference\inference.hpp" />
     <ClInclude Include="Inference\inferObject.hpp" />
     <ClInclude Include="MusicTranscription\PianoTranscription.hpp" />
@@ -191,6 +193,8 @@
     <ClCompile Include="Audio\Wave.cpp" />
     <ClCompile Include="Extend\IconButton.cpp" />
     <ClCompile Include="Helper\Helper.cpp" />
+    <ClCompile Include="Image-Video\ImgVideo.cpp" />
+    <ClCompile Include="ImageUpScale\ImageUpScale.cpp" />
     <ClCompile Include="Inference\inference.cpp" />
     <ClCompile Include="MusicTranscription\PianoTranscription.cpp" />
     <ClCompile Include="ShirakanaUI.cpp" />

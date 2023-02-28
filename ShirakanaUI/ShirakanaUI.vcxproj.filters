@@ -52,6 +52,18 @@
     <Filter Include="源文件\Audio">
       <UniqueIdentifier>{45724dc8-5e08-41ce-b15d-139ff7109c18}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\ImageUpScale">
+      <UniqueIdentifier>{7a655687-d1a2-4e4a-91f8-00d6fc354edb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\ImageUpScale">
+      <UniqueIdentifier>{4a5eafaa-0723-4cad-975a-8b36b2be5ddb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Image/Video">
+      <UniqueIdentifier>{eed968a1-f387-4f9a-b84e-e861a349b1d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Image/Video">
+      <UniqueIdentifier>{c4570ca6-3ecc-4672-a5f8-ac0ec08cb1fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -93,6 +105,12 @@
     <ClInclude Include="resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ImageUpScale\ImageUpScale.hpp">
+      <Filter>头文件\ImageUpScale</Filter>
+    </ClInclude>
+    <ClInclude Include="Image-Video\ImgVideo.hpp">
+      <Filter>头文件\Image/Video</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ShirakanaUI.cpp">
@@ -118,6 +136,12 @@
     </ClCompile>
     <ClCompile Include="Audio\Midi.cpp">
       <Filter>源文件\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageUpScale\ImageUpScale.cpp">
+      <Filter>源文件\ImageUpScale</Filter>
+    </ClCompile>
+    <ClCompile Include="Image-Video\ImgVideo.cpp">
+      <Filter>源文件\Image/Video</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

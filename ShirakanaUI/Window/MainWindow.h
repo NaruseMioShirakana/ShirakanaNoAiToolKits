@@ -30,18 +30,12 @@ namespace AiUI
 	class MainWindow : public Window::UIWindowsWnd
 	{
 	public:
-		enum class FileType
-		{
-			Audio,
-			Image
-		};
-
 		MainWindow(MRender* _render_) : UIWindowsWnd(_render_) {}
 		~MainWindow() override;
 		//界面事件回调
-		virtual bool EventProc(UINotifyEvent, UIControl*, _m_param) override;
+		bool EventProc(UINotifyEvent, UIControl*, _m_param) override;
 		//窗口事件源 WIndows窗口事件回调
-		virtual _m_result EventSource(_m_param, _m_param) override;
+		_m_result EventSource(_m_param, _m_param) override;
 		HWND hWnd = nullptr;
 
 		UIListBox* progress_list = nullptr;
@@ -58,7 +52,15 @@ namespace AiUI
 		InferClass::BaseModelType::callback InferCallback = [&](size_t _cur, size_t _max) -> void
 		{
 			if (!_cur)
+			{
 				process->SetMaxValue(_m_uint(_max));
+				auto listTextTmp = L"转换中：" + progress_list->GetItem(0)->GetText();
+				if (listTextTmp.length() > 30)
+					listTextTmp = listTextTmp.substr(0, 30) + L" ...";
+				progress_list->GetItem(0)->SetText(listTextTmp);
+			}
+			else if (_cur >= _max)
+				progress_list->DeleteItem(0);
 			process->SetCurValue(_m_uint(_cur));
 		};
 

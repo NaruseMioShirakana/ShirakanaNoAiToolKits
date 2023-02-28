@@ -178,7 +178,7 @@ namespace AiUI
 
 				typedef void (WINAPI* PGetNTVer)(DWORD*, DWORD*, DWORD*);
 				static HMODULE hModule = GetModuleHandleW(L"ntdll.dll");
-				static auto GetNTVer = (PGetNTVer)GetProcAddress(hModule, "RtlGetNtVersionNumbers");
+				static auto GetNTVer = (PGetNTVer)(unsigned long long)GetProcAddress(hModule, "RtlGetNtVersionNumbers");
 				DWORD Major = 0;
 				GetNTVer(&Major, nullptr, nullptr);
 
@@ -215,7 +215,7 @@ namespace AiUI
 				rgrc->left += frameX + padding;
 				rgrc->bottom -= frameY + padding;
 
-				WINDOWPLACEMENT placement = { 0 };
+				WINDOWPLACEMENT placement;
 				placement.length = sizeof(WINDOWPLACEMENT);
 				if (GetWindowPlacement(hWnd, &placement)) {
 					if(placement.showCmd == SW_SHOWMAXIMIZED)
@@ -276,7 +276,6 @@ namespace AiUI
 		UIBkgndStyle bgColor;
 		bgColor.background = Color::M_RGBA(255, 255, 255, 255);
 		root->SetBackground(bgColor);
-		const HWND hWnd = (HWND)GetWindowHandle();
 		HICON hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_ICON1));
 		SendMessageW(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 		SendMessageW(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
@@ -408,6 +407,10 @@ namespace AiUI
 	void MainWindow::loadModels()
 	{
 		InferInstance.release();
+		const auto _outputPath = GetCurrentFolder() + L"\\outputs";
+		if (_waccess(_outputPath.c_str(), 0) == -1)
+			if (_wmkdir(_outputPath.c_str()))
+				fprintf_s(stdout, "[Info] Created outputs Dir");
 		std::wstring prefix = L"Plugins";
 		if (_waccess(prefix.c_str(), 0) == -1)
 			if (_wmkdir(prefix.c_str()))
@@ -462,12 +465,7 @@ namespace AiUI
 		}
 		try
 		{
-			if (std::string(_modelConfigs[_index]["type"].GetString()) == "PianoTranscription")
-			{
-				InferInstance.piano_tran_scription = new InferClass::PianoTranScription(_modelConfigs[_index], InferCallback);
-				file_t = FileType::Audio;
-			}
-
+			InferInstance.load(_modelConfigs[_index], InferCallback, file_t);
 		}
 		catch (std::exception& _exception)
 		{
@@ -483,7 +481,7 @@ namespace AiUI
 		button_launch->SetEnabled(true);
 	}
 
-	std::vector<std::wstring> InsertMessageToEmptyEditBox(MainWindow::FileType _modelType)
+	std::vector<std::wstring> InsertMessageToEmptyEditBox(FileType _modelType)
 	{
 		std::vector<std::wstring> _outPut;
 		std::vector<TCHAR> szFileName(MaxPath, 0);
@@ -498,12 +496,64 @@ namespace AiUI
 		ofn.hwndOwner = nullptr;
 		const auto curFolder = GetCurrentFolder();
 		ofn.lpstrInitialDir = curFolder.c_str();
-		if (_modelType == MainWindow::FileType::Audio)
+		if (_modelType == FileType::Audio)
 		{
 			constexpr TCHAR szFilter[] = TEXT("音频 (*.wav;*.mp3;*.ogg;*.flac;*.aac)\0*.wav;*.mp3;*.ogg;*.flac;*.aac\0");
 			ofn.lpstrFilter = szFilter;
 			ofn.lpstrTitle = L"打开音频";
 			ofn.lpstrDefExt = TEXT("wav");
+			ofn.Flags = OFN_HIDEREADONLY | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+			if (GetOpenFileName(&ofn))
+			{
+				auto filePtr = szFileName.data();
+				std::wstring preFix = filePtr;
+				filePtr += preFix.length() + 1;
+				if (!*filePtr)
+					_outPut.emplace_back(preFix);
+				else
+				{
+					preFix += L'\\';
+					while (*filePtr != 0)
+					{
+						std::wstring thisPath(filePtr);
+						_outPut.emplace_back(preFix + thisPath);
+						filePtr += thisPath.length() + 1;
+					}
+				}
+			}
+		}
+		if (_modelType == FileType::Video)
+		{
+			constexpr TCHAR szFilter[] = TEXT("视频 (*.mp4;*.avi;*.mov)\0*.mp4;*.avi;*.mov\0");
+			ofn.lpstrFilter = szFilter;
+			ofn.lpstrTitle = L"打开视频";
+			ofn.lpstrDefExt = TEXT("mp4");
+			ofn.Flags = OFN_HIDEREADONLY | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+			if (GetOpenFileName(&ofn))
+			{
+				auto filePtr = szFileName.data();
+				std::wstring preFix = filePtr;
+				filePtr += preFix.length() + 1;
+				if (!*filePtr)
+					_outPut.emplace_back(preFix);
+				else
+				{
+					preFix += L'\\';
+					while (*filePtr != 0)
+					{
+						std::wstring thisPath(filePtr);
+						_outPut.emplace_back(preFix + thisPath);
+						filePtr += thisPath.length() + 1;
+					}
+				}
+			}
+		}
+		if (_modelType == FileType::Image)
+		{
+			constexpr TCHAR szFilter[] = TEXT("图像 (*.bmp;*.png;*.jpg;*.jpeg;*.img)\0*.bmp;*.png;*.jpg;*.jpeg;*.img\0");
+			ofn.lpstrFilter = szFilter;
+			ofn.lpstrTitle = L"打开图像";
+			ofn.lpstrDefExt = TEXT("bmp");
 			ofn.Flags = OFN_HIDEREADONLY | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;
 			if (GetOpenFileName(&ofn))
 			{
@@ -543,9 +593,7 @@ namespace AiUI
 		ofn.hwndOwner = nullptr;
 		ofn.lpstrInitialDir = curFolder.c_str();
 		if (GetSaveFileName(&ofn))
-		{
 			return szFileName.data();
-		}
 		return GetCurrentFolder();
 	}
 
@@ -561,10 +609,6 @@ namespace AiUI
 
 	void MainWindow::Infer() const
 	{
-		const auto _outputPath = GetCurrentFolder() + L"\\outputs";
-		if (_waccess(_outputPath.c_str(), 0) == -1)
-			if (_wmkdir(_outputPath.c_str()))
-				fprintf_s(stdout, "[Info] Created outputs Dir");
 		SetEnable(false);
 		const std::vector<std::wstring> _paths = InsertMessageToEmptyEditBox(file_t);
 		if(_paths.empty())
@@ -579,22 +623,8 @@ namespace AiUI
 			batchSize = 1;
 		try
 		{
-			if (InferInstance.piano_tran_scription)
-			{
-				for (const auto& it : _paths)
-				{
-					auto listTextTmp = L"转换中：" + progress_list->GetItem(0)->GetText();
-					if (listTextTmp.length() > 30)
-						listTextTmp = listTextTmp.substr(0, 30) + L" ...";
-					progress_list->GetItem(0)->SetText(listTextTmp);
-
-					const auto OMidi = InferInstance.piano_tran_scription->Infer(it, batchSize);
-					OMidi.SaveAs(to_byte_string(_outputPath + it.substr(it.rfind(L'\\'), it.rfind(L'.')) + std::to_wstring(int(it.data())) + L".mid").c_str());
-
-					process->SetCurValue(0);
-					progress_list->DeleteItem(0);
-				}
-			}
+			for (const auto& it : _paths)
+				InferInstance.infer(it, batchSize);
 		}
 		catch(std::exception& _exception)
 		{
