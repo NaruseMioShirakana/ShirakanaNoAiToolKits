@@ -400,6 +400,7 @@ namespace AiUI
 		model_list = GetRootControl()->Child<UIComBox>(L"model_list");
 		background = GetRootControl()->Child<UIImgBox>(L"background");
 		process = GetRootControl()->Child<UIProgressBar>(L"process");
+		_render = GetRender();
 		loadModels();
 		return true;
 	}
@@ -465,7 +466,7 @@ namespace AiUI
 		}
 		try
 		{
-			InferInstance.load(_modelConfigs[_index], InferCallback, file_t);
+			InferInstance.load(_modelConfigs[_index], InferCallback, file_t, _render);
 		}
 		catch (std::exception& _exception)
 		{

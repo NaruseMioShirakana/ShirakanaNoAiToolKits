@@ -72,6 +72,7 @@ namespace AiUI
 
 		void SetEnable(bool) const;
 	private:
+		MRender* _render = nullptr;
 		FileType file_t = FileType::Audio;
 		UIEditBox* batch_size = nullptr;
 		std::vector<rapidjson::Document> _modelConfigs;

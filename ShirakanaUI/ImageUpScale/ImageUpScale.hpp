@@ -7,7 +7,7 @@ INFERCLASSHEADER
 class RealESRGan : public BaseModelType
 {
 public:
-    RealESRGan(const rapidjson::Document&, const callback&);
+    RealESRGan(const rapidjson::Document&, const callback&, Mui::MRender*);
 
     virtual ~RealESRGan();
 
@@ -26,6 +26,7 @@ private:
     long mod_pad_h = 0;
     long mod_pad_w = 0;
     callback _callback;
+    Mui::MRender* _render = nullptr;
 };
 
 INFERCLASSEND

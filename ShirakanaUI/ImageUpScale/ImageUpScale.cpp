@@ -3,7 +3,7 @@
 
 INFERCLASSHEADER
 
-RealESRGan::RealESRGan(const rapidjson::Document& _config, const callback& _cb)
+RealESRGan::RealESRGan(const rapidjson::Document& _config, const callback& _cb, Mui::MRender* _render_ptr)
 {
 	const std::wstring _path = GetCurrentFolder() + L"\\Models\\" + to_wide_string(_config["folder"].GetString()) + L"\\";
 	if (!_config["scale"].IsNull())
@@ -31,6 +31,7 @@ RealESRGan::RealESRGan(const rapidjson::Document& _config, const callback& _cb)
 		throw std::exception(e.what());
 	}
 	_callback = _cb;
+	_render = _render_ptr;
 }
 
 RealESRGan::~RealESRGan()

@@ -3,6 +3,7 @@
 #define IMAGEVIDEOCLASSEND }
 #include <string>
 #include <vector>
+#include "../Helper/Helper.h"
 
 IMAGEVIDEOCLASSHEADER
 
@@ -20,46 +21,18 @@ public:
 	}
 	size_t width() const
 	{
-		return shape[0];
+		return shape[1];
 	}
 	size_t height() const
 	{
-		return shape[1];
+		return shape[0];
 	}
-	Image() = default;
-	Image(const std::wstring&);
-	Image(size_t, size_t, const float*);
-	Image(const Image& _img)
-	{
-		_data = _img._data;
-		shape[0] = _img.shape[0];
-		shape[1] = _img.shape[1];
-	}
-	Image(Image&& _img) noexcept
-	{
-		_data = std::move(_img._data);
-		shape[0] = _img.shape[0];
-		shape[1] = _img.shape[1];
-	}
-	Image& operator=(const Image& _img)
-	{
-		if (&_img == this) 
-			return*this;
-		_data = _img._data;
-		shape[0] = _img.shape[0];
-		shape[1] = _img.shape[1];
-		return*this;
-	}
-	Image& operator=(Image&& _img) noexcept {
-		if (&_img == this)
-		return*this;
-		_data = std::move(_img._data);
-		shape[0] = _img.shape[0];
-		shape[1] = _img.shape[1];
-		return*this;
-	}
-	static Image cut(size_t, size_t, const Image&);
-	Image& cut(size_t, size_t);
+	Image() = delete;
+	Image(const std::wstring&, const long, const long, const float = 0.0);
+	bool write(std::wstring&);
+	~Image() = default;
+	//static Image cut(size_t, size_t, const Image&);
+	//Image& cut(size_t, size_t);
 	// Image& pad(int64_t, int64_t, float value = 0, const std::string& mode = "constant");
 	// Image& pad(int64_t, int64_t, int64_t, int64_t, float value = 0, const std::string& mode = "constant");
 	float* data()
@@ -71,7 +44,8 @@ public:
 		return _data.data();
 	}
 private:
-	std::vector<float> _data;
+	std::vector<std::vector<float>> _RGB;
+	std::vector<std::vector<float>> _Alpha;
 };
 
 IMAGEVIDEOCLASSEND

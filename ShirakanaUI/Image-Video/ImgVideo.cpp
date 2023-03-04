@@ -2,26 +2,17 @@
 
 IMAGEVIDEOCLASSHEADER
 
-Image::Image(const std::wstring& path)
+// 构造函数，从image读取长宽，存储到shape数组的一二维，然后将RGB数据按照 h*w 的大小切片，按照RGB的顺序存储到_RGB中，如果不够h或w就补为pad，Alpha同理
+Image::Image(const std::wstring& path, const long h, const long w, const float pad)
 {
 	
 }
 
-Image::Image(size_t w, size_t h, const float* data_)
+// 使用压缩比较高的格式保存图像
+bool Image::write(std::wstring& _path)
 {
-	shape[0] = w;
-	shape[1] = h;
-	_data = { data_ ,data_ + w * h * 4 };
+	
 }
 
-Image Image::cut(size_t w, size_t h, const Image& _img)
-{
-	return { w,h,_img.data() };
-}
-
-Image& Image::cut(size_t w, size_t h)
-{
-	return *this = { w,h,_data.data() };
-}
 
 IMAGEVIDEOCLASSEND

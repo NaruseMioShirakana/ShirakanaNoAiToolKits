@@ -34,7 +34,7 @@ namespace AiUI
 				throw std::exception("Model Empty!!!");
 		}
 
-		void load(const rapidjson::Document& _config, const InferClass::BaseModelType::callback& _cb, FileType& file_t)
+		void load(const rapidjson::Document& _config, const InferClass::BaseModelType::callback& _cb, FileType& file_t, Mui::MRender* _render = nullptr)
 		{
 			if (std::string(_config["type"].GetString()) == "PianoTranscription")
 			{
@@ -43,7 +43,7 @@ namespace AiUI
 			}
 			else if (std::string(_config["type"].GetString()) == "ESRGan")
 			{
-				real_esr_gan = new InferClass::RealESRGan(_config, _cb);
+				real_esr_gan = new InferClass::RealESRGan(_config, _cb, _render);
 				file_t = FileType::Image;
 			}
 			else
