@@ -47,13 +47,4 @@ void RealESRGan::Infer(const std::wstring& _path, int64_t batch_size) const
 	_callback(progress, progressMax);
 }
 
-std::vector<float> RealESRGan::pre_process(std::vector<float>& image)
-{
-	if (mod_scale != -1)
-	{
-		mod_pad_h = mod_pad_w = 0;
-
-	}
-}
-
 INFERCLASSEND

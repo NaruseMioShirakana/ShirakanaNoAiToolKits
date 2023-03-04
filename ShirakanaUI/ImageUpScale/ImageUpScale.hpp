@@ -13,8 +13,6 @@ public:
 
     void Infer(const std::wstring&, int64_t) const override;
 
-    std::vector<float> pre_process(std::vector<float>&);
-
 private:
     Ort::Session* model = nullptr;
     long scale = 0;
