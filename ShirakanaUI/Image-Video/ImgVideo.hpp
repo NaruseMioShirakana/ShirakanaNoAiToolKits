@@ -15,8 +15,8 @@ public:
 	std::vector<std::vector<float>> _Alpha;
 
 	Image() = delete; //½ûÖ¹Ä¬ÈÏ¹¹Ôì
-	Image(const std::wstring&, const long, const long, const float = 0.0);
-	bool write(std::wstring&);
+	Image(const std::wstring&, long, long, long, float = 0.0);
+	bool write(const std::wstring&, long);
 	~Image() = default;
 };
 
