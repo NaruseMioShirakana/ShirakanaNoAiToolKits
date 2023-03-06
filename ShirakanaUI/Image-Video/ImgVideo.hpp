@@ -1,6 +1,6 @@
 ﻿/*
 * file: ImgVideo.hpp
-* info: 图片数据切片类实现
+* info: ͼƬ������Ƭ��ʵ��
 *
 * Author: Maplespe(mapleshr@icloud.com)
 *
@@ -18,7 +18,7 @@ IMAGEVIDEOCLASSHEADER
 class ImageSlicer
 {
 public:
-	//[0] - width [1] - height [2] - 行切片数
+	//[0] - width [1] - height [2] - ����Ƭ��
 	int shape[3] = { 0,0,4 };
 	struct Data
 	{
@@ -26,27 +26,27 @@ public:
 		std::vector<float> alpha;
 	} data;
 
-	ImageSlicer() = delete; //禁止默认构造
+	ImageSlicer() = delete; //��ֹĬ�Ϲ���
 	~ImageSlicer() = default;
 
-	/*图像切片器
-	* @param input - 输入文件路径
-	* @param width - 切片宽度
-	* @param height - 切片高度
+	/*ͼ����Ƭ��
+	* @param input - �����ļ�·��
+	* @param width - ��Ƭ���
+	* @param height - ��Ƭ�߶�
 	* @param len - offset
-	* @param pad - 填充
-	* @param line - 显示切片网格线
+	* @param pad - ���
+	* @param line - ��ʾ��Ƭ������
 	*
-	* @return 如果构造失败将抛出异常 包括但不限于 文件损坏、不存在、参数错误、内存不足
+	* @return �������ʧ�ܽ��׳��쳣 ������������ �ļ��𻵡������ڡ����������ڴ治��
 	*/
 	ImageSlicer(const std::wstring&, int, int, int, float pad = 0.f, bool line = true);
 
-	/*合并切片数据并写出
-	* @param path - 保存路径
-	* @param scale - 缩放倍数
-	* @param quality - 图片压缩质量 (0-100) 100为最好
+	/*�ϲ���Ƭ���ݲ�д��
+	* @param path - ����·��
+	* @param scale - ���ű���
+	* @param quality - ͼƬѹ������ (0-100) 100Ϊ���
 	*
-	* @return 异常: std::bad_alloc,std::runtime_error
+	* @return �쳣: std::bad_alloc,std::runtime_error
 	*/
 	bool MergeWrite(std::wstring path, int scale, UINT quality = 100);
 

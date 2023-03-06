@@ -1,6 +1,6 @@
 ﻿/*
 * file: ImgVideo.cpp
-* info: 图片数据切片类实现
+* info: ͼƬ������Ƭ��ʵ��
 *
 * Author: Maplespe(mapleshr@icloud.com)
 *
@@ -204,7 +204,7 @@ ImageSlicer::ImageSlicer(const std::wstring& input, const int width, const int h
 	delete canvas;
 }
 
-// 使用压缩比较高的格式从_RGB和_Alpha保存图像
+// ʹ��ѹ���Ƚϸߵĸ�ʽ��_RGB��_Alpha����ͼ��
 bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
 {
 	//缩放切片
