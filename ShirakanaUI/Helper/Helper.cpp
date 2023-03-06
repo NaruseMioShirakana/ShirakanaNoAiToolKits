@@ -1,5 +1,5 @@
 ﻿/*
-* file: Helper.h
+* file: Helper.cpp
 * info: 应用程序WINAPI助手
 *
 * Author: Maplespe(mapleshr@icloud.com)

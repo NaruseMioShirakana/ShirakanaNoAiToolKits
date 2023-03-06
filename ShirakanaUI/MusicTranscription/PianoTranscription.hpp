@@ -1,9 +1,12 @@
 #pragma once
 #include "../Inference/inference.hpp"
 #include "../AVCodec/AvCodec.hpp"
-#include "../Lib/rapidjson/document.h"
-
 #include "../Audio/Midi.hpp"
+#ifdef max
+#undef max
+#include "document.h"
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
 
 INFERCLASSHEADER
 

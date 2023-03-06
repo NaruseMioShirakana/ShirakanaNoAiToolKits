@@ -9,14 +9,22 @@
 #include "framework.h"
 #include "ShirakanaUI.h"
 #include "Helper/Helper.h"
+//Gdiplus
+#include <comdef.h>
+#include <gdiplus.h>
+#pragma comment(lib, "GdiPlus.lib")
 
-
+ULONG_PTR g_gdiplusToken = 0;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
+
+    //初始化Gdiplus
+    Gdiplus::GdiplusStartupInput StartupInput;
+    Gdiplus::GdiplusStartup(&g_gdiplusToken, &StartupInput, NULL);
     
     //初始化MiaoUI界面库
     std::wstring _error;

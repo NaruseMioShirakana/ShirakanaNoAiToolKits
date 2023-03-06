@@ -1,6 +1,6 @@
-/*
+ï»¿/*
 * file: Helper.h
-* info: Ó¦ÓÃ³ÌĞòWINAPIÖúÊÖ
+* info: åº”ç”¨ç¨‹åºWINAPIåŠ©æ‰‹
 *
 * Author: Maplespe(mapleshr@icloud.com)
 *
@@ -10,8 +10,8 @@
 #include "..\framework.h"
 
 
-//»ñÈ¡µ±Ç°Ó¦ÓÃ³ÌĞòËùÔÚÄ¿Â¼
+//è·å–å½“å‰åº”ç”¨ç¨‹åºæ‰€åœ¨ç›®å½•
 extern std::wstring GetCurrentFolder();
 
-//»ñÈ¡µ±Ç°´°¿ÚËùÔÚÏÔÊ¾Æ÷DPI
+//è·å–å½“å‰çª—å£æ‰€åœ¨æ˜¾ç¤ºå™¨DPI
 extern bool GetWNdMonitorDPI(HWND hWNd, UINT& dpiX, UINT& dpiY);

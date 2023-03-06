@@ -18,6 +18,8 @@
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "uxtheme.lib")
 
+#include "..\Image-Video\ImgVideo.hpp"
+
 #define _MNAME(x) (control->GetName() == (x))
 
 namespace AiUI
@@ -401,6 +403,7 @@ namespace AiUI
 		background = GetRootControl()->Child<UIImgBox>(L"background");
 		process = GetRootControl()->Child<UIProgressBar>(L"process");
 		_render = GetRender();
+
 		loadModels();
 		return true;
 	}

@@ -1,7 +1,11 @@
 #pragma once
 #include "../Inference/inference.hpp"
-#include "../Lib/rapidjson/document.h"
-
+#ifdef max
+#undef max
+#include "rapidjson.h"
+#include "document.h"
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
 INFERCLASSHEADER
 
 class RealESRGan : public BaseModelType

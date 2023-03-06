@@ -7,8 +7,7 @@
 * date: 2022-9-19 Create
 */
 #pragma once
-#include "..\framework.h"
-#include "../Lib/rapidjson/document.h"
+#include "../framework.h"
 #include "../Inference/inferObject.hpp"
 
 namespace AiUI

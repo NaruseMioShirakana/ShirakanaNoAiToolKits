@@ -1,17 +1,305 @@
+ï»¿/*
+* file: ImgVideo.cpp
+* info: å›¾ç‰‡æ•°æ®åˆ‡ç‰‡ç±»å®ç°
+*
+* Author: Maplespe(mapleshr@icloud.com)
+*
+* date: 2023-3-4 Create.
+*/
 #include "ImgVideo.hpp"
+//Gdiplus
+#ifdef _WIN32
+#include <comdef.h>
+#include <gdiplus.h>
+#pragma comment(lib, "Msimg32.lib")  
+#endif
 
 IMAGEVIDEOCLASSHEADER
 
-// ¹¹Ôìº¯Êı£¬´Óimage¶ÁÈ¡³¤¿í£¬´æ´¢µ½shapeÊı×éµÄÒ»¶şÎ¬£¬È»ºó½«RGBÊı¾İ°´ÕÕ h*w µÄ´óĞ¡ÇĞÆ¬£¬°´ÕÕRGBµÄË³Ğò´æ´¢µ½_RGBÖĞ£¬Èç¹û²»¹»h»òw¾Í²¹Îªpad£¬AlphaÍ¬Àí£¨Èç¹û²»´æÔÚAlphaÍ¨µÀÔòÈ«²¿ÉèÖÃÎª0
-Image::Image(const std::wstring& path, const long h, const long w, const float pad)
+void GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
-	
+	UINT num = 0;           // number of image encoders
+	UINT size = 0;          // size of the image encoder array in bytes
+
+	Gdiplus::ImageCodecInfo* pImageCodecInfo = nullptr;
+	Gdiplus::GetImageEncodersSize(&num, &size);
+	if (size == 0) {
+		return;
+	}
+
+	pImageCodecInfo = static_cast<Gdiplus::ImageCodecInfo*>(malloc(size));
+	if (pImageCodecInfo == nullptr) {
+		return;
+	}
+
+	Gdiplus::GetImageEncoders(num, size, pImageCodecInfo);
+	for (UINT i = 0; i < num; ++i) {
+		if (wcscmp(pImageCodecInfo[i].MimeType, format) == 0) {
+			*pClsid = pImageCodecInfo[i].Clsid;
+			break;
+		}
+	}
+
+	free(pImageCodecInfo);
 }
 
-// Ê¹ÓÃÑ¹Ëõ±È½Ï¸ßµÄ¸ñÊ½´Ó_RGBºÍ_Alpha±£´æÍ¼Ïñ
-bool Image::write(std::wstring& _path)
+//quality - å‹ç¼©è´¨é‡ (0-100), 100 è¡¨ç¤ºæœ€é«˜è´¨é‡
+bool SaveBitmapToPNG(Gdiplus::Bitmap* bitmap, const WCHAR* filename, UINT quality = 100)
 {
-	
+	CLSID pngClsid;
+	GetEncoderClsid(L"image/png", &pngClsid);
+	Gdiplus::EncoderParameters encoderParams{};
+	encoderParams.Count = 1;
+	encoderParams.Parameter[0].Guid = Gdiplus::EncoderQuality;
+	encoderParams.Parameter[0].Type = Gdiplus::EncoderParameterValueTypeLong;
+	encoderParams.Parameter[0].NumberOfValues = 1;
+	encoderParams.Parameter[0].Value = &quality;
+
+	bitmap->Save(filename, &pngClsid, &encoderParams);
+
+	return true;
+}
+
+void DrawRectangle(HDC hdc, int x, int y, int width, int height, HPEN pen)
+{
+	MoveToEx(hdc, x, y, NULL);
+	LineTo(hdc, x + width, y);
+	LineTo(hdc, x + width, y + height);
+	LineTo(hdc, x, y + height);
+	LineTo(hdc, x, y);
+}
+
+ImageSlicer::ImageSlicer(const std::wstring& input, const int width, const int height,
+	const int len, const float pad, bool line)
+{
+	//åŠ è½½å›¾åƒ
+	Gdiplus::Bitmap* bmp = Gdiplus::Bitmap::FromFile(input.c_str());
+	if (!bmp) throw std::runtime_error("image load failed!");
+
+	shape[0] = (int)bmp->GetWidth();
+	shape[1] = (int)bmp->GetHeight();
+
+	//åˆ‡ç‰‡æ•°
+	int clipCountX = static_cast<int>(ceil((float)shape[0] / float(width - len)));
+	int clipCountY = static_cast<int>(ceil((float)shape[1] / float(height - len)));
+	//åˆ‡ç‰‡åçš„æ€»å®½é«˜
+	int clipWidth = clipCountX * width;
+	int clipHeight = clipCountY * height;
+	//offset
+	clipCountX = static_cast<int>(ceil((float)clipWidth / (float)width));
+	clipCountY = static_cast<int>(ceil((float)clipHeight / (float)height));
+
+	shape[2] = clipCountX;
+
+	//åˆ›å»ºåˆ‡ç‰‡ç”»å¸ƒ
+	Gdiplus::Bitmap* canvas = new Gdiplus::Bitmap(clipWidth, clipHeight, PixelFormat32bppARGB);
+	Gdiplus::Graphics dw(canvas);
+
+	if (!canvas)
+	{
+		delete bmp;
+		throw std::runtime_error("out of memory!");
+	}
+
+	BYTE p = static_cast<BYTE>(pad * 255.f);
+	dw.Clear(Gdiplus::Color(p, p, p, p));
+
+	//è½¬ä¸ºGDIæ“ä½œ GDIPluså¤ªå¤ªå¤ªæ…¢äº†
+	HDC canvasDC = dw.GetHDC();
+
+	HDC compDC = CreateCompatibleDC(canvasDC);
+	HBITMAP hbmp = nullptr;
+	bmp->GetHBITMAP(Gdiplus::Color::Transparent, &hbmp);
+	SelectObject(compDC, hbmp);
+	auto DrawImage = [&canvasDC, &compDC, this](int x, int y, int srcx, int srcy, int w, int h)
+	{
+		//const Gdiplus::Rect dst(x, y, w, h);
+		//dw.DrawImage(bmp, dst, srcx, srcy, w, h, Gdiplus::UnitPixel);
+		if(srcx + w > shape[0])
+			w = shape[0] - srcx;
+		if (srcy + h > shape[1])
+			h = shape[1] - srcy;
+
+		BLENDFUNCTION blend = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
+		AlphaBlend(canvasDC, x, y, w, h, compDC, srcx, srcy, w, h, blend);
+	};
+
+	//æ˜¾ç¤ºç½‘æ ¼çº¿
+	HPEN pen = nullptr;
+	if (line)
+	{
+		pen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+		SelectObject(canvasDC, pen);
+	}
+
+	int dstY = 0;
+	int srcY = 0;
+	for (int y = 0; y < clipCountY; y++)
+	{
+		int dstX = 0;
+		int srcX = 0;
+		for (int x = 0; x < clipCountX; x++)
+		{
+			if (y != 0 && len != 0)
+			{
+				//ç»˜åˆ¶ Y offset éƒ¨åˆ†
+				DrawImage(x != 0 ? dstX + len : dstX, dstY, srcX, srcY - len, width, len);
+			}
+			if (x != 0 && len != 0)
+			{
+				//ç»˜åˆ¶ X offset éƒ¨åˆ†
+				DrawImage(dstX, dstY, srcX - len, y != 0 ? srcY - len : srcY, len, height);
+				DrawImage(dstX + len, y != 0 ? dstY + len : dstY, srcX, srcY, width - len, y != 0 ? height - len : height);
+			}
+			else
+				DrawImage(len != 0 ? 0 : dstX, y != 0 ? dstY + len : dstY, srcX, srcY, width, height);
+
+			if (line)
+				DrawRectangle(canvasDC, dstX, dstY, dstX + width, dstY + height, pen);
+
+			dstX += width;
+			srcX += width - len;
+		}
+		dstY += height;
+		srcY += height - len;
+	}
+	dw.ReleaseHDC(canvasDC);
+	DeleteObject(hbmp);
+	DeleteDC(compDC);
+	if (pen) DeleteObject(pen);
+	delete bmp;
+
+	//è¯»å–åˆ°vector
+	size_t pixelSize = clipWidth * clipHeight;
+	data.rgb.reserve(pixelSize * 3);
+	data.alpha.reserve(pixelSize);
+
+	Gdiplus::Rect lockRect(0, 0, clipWidth, clipHeight);
+	Gdiplus::BitmapData lockData{};
+	if(canvas->LockBits(&lockRect, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &lockData) != Gdiplus::Status::Ok)
+	{
+		delete canvas;
+		throw std::runtime_error("LockBits failed!");
+	}
+
+	for (UINT y = 0; y < lockData.Height; y++)
+	{
+		for (UINT x = 0; x < lockData.Width; x++)
+		{
+			BYTE* ptr = static_cast<BYTE*>(lockData.Scan0) + lockData.Stride * y + x * 4;
+			data.rgb.push_back((float)ptr[2] / 255.f);  //R
+			data.rgb.push_back((float)ptr[1] / 255.f);  //G
+			data.rgb.push_back((float)ptr[0] / 255.f);  //B
+			data.alpha.push_back((float)ptr[3] / 255.f);//A
+		}
+	}
+	canvas->UnlockBits(&lockData);
+
+	m_clip.clipSize = std::make_pair(clipWidth, clipHeight);
+	m_clip.blockSize = std::make_pair(width, height);
+	m_clip.clipLength = len;
+
+	//SaveBitmapToPNG(canvas, L"E:\\testclip.png");
+
+	delete canvas;
+}
+
+// ä½¿ç”¨å‹ç¼©æ¯”è¾ƒé«˜çš„æ ¼å¼ä»_RGBå’Œ_Alphaä¿å­˜å›¾åƒ
+bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
+{
+	//ç¼©æ”¾åˆ‡ç‰‡
+	int newWidth = m_clip.clipSize.first * scale;
+	int newHeight = m_clip.clipSize.second * scale;
+	int newLength = m_clip.clipLength * scale;
+	int newClipW = m_clip.blockSize.first * scale;
+	int newClipH = m_clip.blockSize.second * scale;
+	int srcWidth = shape[0] * scale;
+	int srcHeight = shape[1] * scale;
+
+	int clipCountX = newWidth / newClipW;
+	int clipCountY = newHeight / newClipH;
+
+	//æ£€æŸ¥åƒç´ æ˜¯å¦åŒ¹é…
+	size_t alphaSize = newWidth * newHeight;
+	size_t pixelSize = alphaSize * 3;
+	if (pixelSize != data.rgb.size() || alphaSize != data.alpha.size())
+		return false;
+
+	//åˆ›å»ºcanvas
+	Gdiplus::Bitmap* canvas = new Gdiplus::Bitmap(srcWidth, srcHeight, PixelFormat32bppARGB);
+	//å¡«å……æ•°æ®
+	Gdiplus::Rect lockRect(0, 0, srcWidth, srcHeight);
+	Gdiplus::BitmapData lockData{};
+	if (canvas->LockBits(&lockRect, Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &lockData) != Gdiplus::Status::Ok)
+	{
+		delete canvas;
+		throw std::runtime_error("LockBits failed!");
+	}
+
+	auto WriteImage = [&](int x, int y, int srcx, int srcy, int w, int h)
+	{
+		if (x + w > srcWidth)
+			w = srcWidth - x;
+		if (x + h > srcHeight)
+			h = srcHeight - h;
+
+		for (int _y = 0; _y < h; _y++)
+		{
+			for (int _x = 0; _x < w; _x++)
+			{
+				auto SrcPixel = [&](int index)
+				{
+					const int offset = (_y + srcy) * m_clip.clipSize.first * 3 + (_x + srcx) * 3;
+					return static_cast<BYTE>(data.rgb[offset + index] * 255.f);
+				};
+				if (y + _y >= srcHeight || x + _x >= srcWidth) break;
+
+				BYTE* p = static_cast<BYTE*>(lockData.Scan0) + lockData.Stride * (y + _y) + (x + _x) * 4;
+
+				p[0] = SrcPixel(2);//B
+				p[1] = SrcPixel(1);//G
+				p[2] = SrcPixel(0);//R
+				p[3] = BYTE(data.alpha[(srcx + _x) * m_clip.clipSize.first + (srcy + _y)] * 255.f);
+			}
+		}
+	};
+
+	//åæ¨åˆ‡ç‰‡å³å¯è¿˜åŸ
+	int dstY = 0;
+	int srcY = 0;
+	for (int y = 0; y < clipCountY; y++)
+	{
+		int dstX = 0;
+		int srcX = 0;
+		for (int x = 0; x < clipCountX; x++)
+		{
+			if (x != 0 && newLength != 0)
+			{
+				WriteImage(dstX, dstY,						 //x,y
+					srcX + newLength,						 //srcX
+					y != 0 ? srcY + newLength : srcY,		 //srcY
+					newClipW - newLength,					 //width
+					y != 0 ? newClipH - newLength : newClipH //height
+				);
+			}
+			else
+				WriteImage(dstX, dstY,						 //x,y
+					newLength != 0 ? 0 : srcX,				 //srcX
+					y != 0 ? srcY + newLength : srcY,		 //srcY
+					newClipW, newClipH						 //width,height
+				);
+
+			dstX += newClipW - newLength;
+			srcX += newClipW;
+		}
+		dstY += newClipH - newLength;
+		srcY += newClipH;
+	}
+	canvas->UnlockBits(&lockData);
+
+	bool ret = SaveBitmapToPNG(canvas, path.c_str(), quality);
+	delete canvas;
+	return ret;
 }
 
 
