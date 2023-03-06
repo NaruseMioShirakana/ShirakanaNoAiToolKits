@@ -19,16 +19,17 @@ public:
 
 private:
     Ort::Session* model = nullptr;
-    long scale = 0;
-    long tile_size = 0;
-    long tile_pad = 0;
-    long pre_pad = 0;
-    long mod_scale = 0;
-    long half = 0;
-    long mod_pad_h = 0;
-    long mod_pad_w = 0;
+    Ort::Session* model_alpha = nullptr;
+    long scale = 4;
+    long tile_size = 10;
+    long tile_pad = 10;
+    long pre_pad = 10;
+    long mod_scale = 4;
     callback _callback;
     Mui::MRender* _render = nullptr;
+
+    std::vector<const char*> inputNames = { "audio" };
+    std::vector<const char*> outputNames = { "frame_output", "reg_onset_output", "reg_offset_output", "velocity_output", "reg_pedal_onset_output", "reg_pedal_offset_output", "pedal_frame_output" };
 };
 
 INFERCLASSEND
