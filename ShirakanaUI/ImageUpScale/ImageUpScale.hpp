@@ -25,11 +25,13 @@ private:
     long tile_pad = 10;
     long pre_pad = 10;
     long mod_scale = 4;
+    long s_width = 64;
+    long s_height = 64;
     callback _callback;
     Mui::MRender* _render = nullptr;
 
-    std::vector<const char*> inputNames = { "audio" };
-    std::vector<const char*> outputNames = { "frame_output", "reg_onset_output", "reg_offset_output", "velocity_output", "reg_pedal_onset_output", "reg_pedal_offset_output", "pedal_frame_output" };
+    std::vector<const char*> inputNames = { "src" };
+    std::vector<const char*> outputNames = { "img" };
 };
 
 INFERCLASSEND

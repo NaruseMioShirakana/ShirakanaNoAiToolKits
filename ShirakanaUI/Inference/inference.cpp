@@ -1,6 +1,8 @@
 #include "inference.hpp"
 #include <thread>
 
+#define CUDAMOESS
+
 InferClass::BaseModelType::BaseModelType()
 {
 #ifdef CUDAMOESS
