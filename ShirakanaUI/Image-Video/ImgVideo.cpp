@@ -95,12 +95,6 @@ ImageSlicer::ImageSlicer(const std::wstring& input, const int width, const int h
 	Gdiplus::Bitmap* canvas = new Gdiplus::Bitmap(clipWidth, clipHeight, PixelFormat32bppARGB);
 	Gdiplus::Graphics dw(canvas);
 
-	if (!canvas)
-	{
-		delete bmp;
-		throw std::runtime_error("out of memory!");
-	}
-
 	BYTE p = static_cast<BYTE>(pad * 255.f);
 	dw.Clear(Gdiplus::Color(p, p, p, p));
 
@@ -182,17 +176,35 @@ ImageSlicer::ImageSlicer(const std::wstring& input, const int width, const int h
 		throw std::runtime_error("LockBits failed!");
 	}
 
-	for (UINT y = 0; y < lockData.Height; y++)
+	//按切片存储
+	auto ReadImage = [&](int x, int y)
 	{
-		for (UINT x = 0; x < lockData.Width; x++)
+		for (int _y = 0; _y < width; _y++)
 		{
-			BYTE* ptr = static_cast<BYTE*>(lockData.Scan0) + lockData.Stride * y + x * 4;
-			data.rgb.push_back((float)ptr[2] / 255.f);  //R
-			data.rgb.push_back((float)ptr[1] / 255.f);  //G
-			data.rgb.push_back((float)ptr[0] / 255.f);  //B
-			data.alpha.push_back((float)ptr[3] / 255.f);//A
+			for (int _x = 0; _x < height; _x++)
+			{
+				BYTE* ptr = static_cast<BYTE*>(lockData.Scan0) + lockData.Stride * (y + _y) + (x + _x) * 4;
+
+				data.alpha.push_back((float)ptr[3] / 255.f);//A
+				data.rgb.push_back((float)ptr[2] / 255.f);  //R
+				data.rgb.push_back((float)ptr[1] / 255.f);  //G
+				data.rgb.push_back((float)ptr[0] / 255.f);  //B
+			}
 		}
+	};
+
+	dstY = 0;
+	for (int y = 0; y < clipCountY; y++)
+	{
+		int dstX = 0;
+		for (int x = 0; x < clipCountX; x++)
+		{
+			ReadImage(dstX, dstY);
+			dstX += width;
+		}
+		dstY += height;
 	}
+
 	canvas->UnlockBits(&lockData);
 
 	m_clip.clipSize = std::make_pair(clipWidth, clipHeight);
@@ -236,12 +248,21 @@ bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
 		throw std::runtime_error("LockBits failed!");
 	}
 
-	auto WriteImage = [&](int x, int y, int srcx, int srcy, int w, int h)
+	auto WriteImage = [&](int x, int y, int srcx, int srcy, int w, int h, int blockX, int blockY)
 	{
 		if (x + w > srcWidth)
 			w = srcWidth - x;
 		if (x + h > srcHeight)
 			h = srcHeight - h;
+
+		srcx -= blockX * newClipW;
+		srcy -= blockY * newClipH;
+
+		//block偏移
+		const int blockSizeA = newClipW * newClipH;
+		const int blockSizeRGB = blockSizeA * 3;
+		const int blockOffsetA = (blockY * clipCountX + blockX) * blockSizeA;
+		const int blockOffsetRGB = (blockY * clipCountX + blockX) * blockSizeRGB;
 
 		for (int _y = 0; _y < h; _y++)
 		{
@@ -249,7 +270,7 @@ bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
 			{
 				auto SrcPixel = [&](int index)
 				{
-					const int offset = (_y + srcy) * m_clip.clipSize.first * 3 + (_x + srcx) * 3;
+					const int offset = blockOffsetRGB + ((srcy + _y) * newClipW + (srcx + _x)) * 3;
 					return static_cast<BYTE>(data.rgb[offset + index] * 255.f);
 				};
 				if (y + _y >= srcHeight || x + _x >= srcWidth) break;
@@ -259,7 +280,9 @@ bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
 				p[0] = SrcPixel(2);//B
 				p[1] = SrcPixel(1);//G
 				p[2] = SrcPixel(0);//R
-				p[3] = BYTE(data.alpha[(srcx + _x) * m_clip.clipSize.first + (srcy + _y)] * 255.f);
+
+				//alpha
+				p[3] = BYTE(data.alpha[blockOffsetA + ((srcy + _y) * newClipW + (srcx + _x))] * 255.f);
 			}
 		}
 	};
@@ -279,14 +302,16 @@ bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
 					srcX + newLength,						 //srcX
 					y != 0 ? srcY + newLength : srcY,		 //srcY
 					newClipW - newLength,					 //width
-					y != 0 ? newClipH - newLength : newClipH //height
+					y != 0 ? newClipH - newLength : newClipH,//height
+					x, y									 //blockX,blockY
 				);
 			}
 			else
 				WriteImage(dstX, dstY,						 //x,y
 					newLength != 0 ? 0 : srcX,				 //srcX
 					y != 0 ? srcY + newLength : srcY,		 //srcY
-					newClipW, newClipH						 //width,height
+					newClipW, newClipH,						 //width,height
+					x, y									 //blockX,blockY
 				);
 
 			dstX += newClipW - newLength;
@@ -295,6 +320,7 @@ bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
 		dstY += newClipH - newLength;
 		srcY += newClipH;
 	}
+
 	canvas->UnlockBits(&lockData);
 
 	bool ret = SaveBitmapToPNG(canvas, path.c_str(), quality);
