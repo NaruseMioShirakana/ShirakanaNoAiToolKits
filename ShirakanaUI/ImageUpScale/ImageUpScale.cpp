@@ -53,46 +53,6 @@ void RealESRGan::Infer(const std::wstring& _path, int64_t batch_size) const
 	auto& imgRGB = img.data.rgb;
 	auto& imgAlpha = img.data.alpha;
 	const size_t progressMax = imgAlpha.size() / s_len;
-	const size_t progressX = img.shape[2];
-	const size_t progressY = progressMax / progressX;
-	const size_t XLen = progressX * s_width;
-	const size_t YLen = progressY * s_width;
-
-	std::vector<float> _imgRGB;
-	_imgRGB.reserve(imgRGB.size());
-	std::vector<float> _imgALPHA;
-	_imgALPHA.reserve(imgAlpha.size());
-
-	const auto rgbData = imgRGB.data();
-	const auto AlphaData = imgAlpha.data();
-
-	long class_num = 3;
-	for (size_t j = 0; j < progressY; ++j)
-		for (size_t i = 0; i < progressX; ++i)
-		{
-			const size_t x_beg = i * s_width * class_num;
-			const size_t y_beg = j * s_height;
-			const size_t x_end = (i + 1) * s_width * class_num;
-			const size_t y_end = (j + 1) * s_height;
-			for (size_t y = y_beg; y < y_end; ++y)
-			{
-				_imgRGB.insert(_imgRGB.end(), rgbData + (XLen * class_num * y + x_beg), rgbData + (XLen * class_num * y + x_end));
-			}
-		}
-
-	class_num = 1;
-	for (size_t j = 0; j < progressY; ++j)
-		for (size_t i = 0; i < progressX; ++i)
-		{
-			const size_t x_beg = i * s_width * class_num;
-			const size_t y_beg = j * s_height;
-			const size_t x_end = (i + 1) * s_width * class_num;
-			const size_t y_end = (j + 1) * s_height;
-			for (size_t y = y_beg; y < y_end; ++y)
-			{
-				_imgALPHA.insert(_imgALPHA.end(), AlphaData + (XLen * class_num * y + x_beg), AlphaData + (XLen * class_num * y + x_end));
-			}
-		}
 
 	_callback(progress, progressMax);
 
@@ -107,7 +67,7 @@ void RealESRGan::Infer(const std::wstring& _path, int64_t batch_size) const
 			break;
 
 		int64_t shape[4] = { batch_size,s_height,s_width,3 };
-		std::vector<float> ImageI(_imgRGB.data() + (s_len * 3ll * progress), _imgRGB.data() + (s_len * 3ll * (progress + batch_size)));
+		std::vector<float> ImageI(imgRGB.data() + (s_len * 3ll * progress), imgRGB.data() + (s_len * 3ll * (progress + batch_size)));
 		std::vector<Ort::Value> Tensors, outTensors;
 		Tensors.emplace_back(Ort::Value::CreateTensor(*memory_info, ImageI.data(), ImageI.size(), shape, 4));
 		try
@@ -132,7 +92,7 @@ void RealESRGan::Infer(const std::wstring& _path, int64_t batch_size) const
 
 		shape[3] = 1;
 		Tensors.clear();
-		ImageI = std::vector<float>(_imgALPHA.data() + (s_len * progress), _imgALPHA.data() + (s_len * (progress + batch_size)));
+		ImageI = std::vector<float>(imgAlpha.data() + (s_len * progress), imgAlpha.data() + (s_len * (progress + batch_size)));
 
 		Tensors.emplace_back(Ort::Value::CreateTensor(*memory_info, ImageI.data(), ImageI.size(), shape, 4));
 
@@ -160,22 +120,16 @@ void RealESRGan::Infer(const std::wstring& _path, int64_t batch_size) const
 		i += batch_size;
 		_callback(progress, progressMax);
 	}
-	imgRGB.clear(); imgAlpha.clear();
-	imgRGB.reserve(3ll * s_width * s_height * scale * scale * progressMax);
-	imgAlpha.reserve(1ll * s_width * s_height * scale * scale * progressMax);
-
-	for (size_t j = 0; j < progressY; ++j)
+	imgRGB.clear();
+	imgAlpha.clear();
+	for (size_t i = 0; i < _imgOutAlpha.size(); ++i)
 	{
-		for(size_t y = 0; y < 1ull * s_height * scale; ++y)
-			for (size_t i = 0; i < progressX; ++i)
-			{
-				const auto pos = j * progressX + i;
-				imgRGB.insert(imgRGB.end(), _imgOutRGB[pos].data() + y * 3ull * s_width * scale, _imgOutRGB[pos].data() + (y + 1) * 3ull * s_width * scale);
-				imgAlpha.insert(imgAlpha.end(), _imgOutAlpha[pos].data() + y * 1ull * s_width * scale, _imgOutAlpha[pos].data() + (y + 1) * 1ull * s_width * scale);
-			}
+		imgRGB.insert(imgRGB.end(), _imgOutRGB[i].begin(), _imgOutRGB[i].end());
+		imgAlpha.insert(imgAlpha.end(), _imgOutAlpha[i].begin(), _imgOutAlpha[i].end());
 	}
 
-	if (!img.MergeWrite((_outputPath + _path.substr(_path.rfind(L'\\'), _path.rfind(L'.')) + std::to_wstring(unsigned long long(_path.data())) + L".png").c_str(), 1))
+
+	if (!img.MergeWrite((_outputPath + _path.substr(_path.rfind(L'\\'), _path.rfind(L'.')) + std::to_wstring(unsigned long long(_path.data())) + L".png").c_str(), 4))
 		throw std::exception("error when write image");
 
 	/*
