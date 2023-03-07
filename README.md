@@ -31,6 +31,7 @@
 
 目前支持：
 - [PianoTranScription](https://github.com/bytedance/piano_transcription)
+- [RealEsrGan](https://github.com/xinntao/Real-ESRGAN)
 
 ## 依赖列表
 - [FFmpeg](https://ffmpeg.org/)
