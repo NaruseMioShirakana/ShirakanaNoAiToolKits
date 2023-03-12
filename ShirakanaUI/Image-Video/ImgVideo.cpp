@@ -60,7 +60,7 @@ bool SaveBitmapToPNG(Gdiplus::Bitmap* bitmap, const WCHAR* filename, UINT qualit
 	return true;
 }
 
-void DrawRectangle(HDC hdc, int x, int y, int width, int height, HPEN pen)
+void DrawRectangle(HDC hdc, int x, int y, int width, int height)
 {
 	MoveToEx(hdc, x, y, NULL);
 	LineTo(hdc, x + width, y);
@@ -80,8 +80,8 @@ ImageSlicer::ImageSlicer(const std::wstring& input, const int width, const int h
 	shape[1] = (int)bmp->GetHeight();
 
 	//切片数
-	int clipCountX = static_cast<int>(ceil((float)shape[0] / float(width - len)));
-	int clipCountY = static_cast<int>(ceil((float)shape[1] / float(height - len)));
+	int clipCountX = static_cast<int>(ceil((float)shape[0] / float(width - len * 2)));
+	int clipCountY = static_cast<int>(ceil((float)shape[1] / float(height - len * 2)));
 	//切片后的总宽高
 	int clipWidth = clipCountX * width;
 	int clipHeight = clipCountY * height;
@@ -120,9 +120,11 @@ ImageSlicer::ImageSlicer(const std::wstring& input, const int width, const int h
 
 	//显示网格线
 	HPEN pen = nullptr;
+	HPEN dstPen = nullptr;
 	if (line)
 	{
 		pen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+		dstPen = CreatePen(PS_SOLID, 2, RGB(0, 255, 0));
 		SelectObject(canvasDC, pen);
 	}
 
@@ -143,24 +145,53 @@ ImageSlicer::ImageSlicer(const std::wstring& input, const int width, const int h
 			{
 				//绘制 X offset 部分
 				DrawImage(dstX, dstY, srcX - len, y != 0 ? srcY - len : srcY, len, height);
-				DrawImage(dstX + len, y != 0 ? dstY + len : dstY, srcX, srcY, width - len, y != 0 ? height - len : height);
+
+				const int _x = dstX + len;
+				const int _y = y != 0 ? dstY + len : dstY;
+				const int _w = width - len * 2;
+				const int _h = y != 0 ? height - len * 2 : height - len;
+				DrawImage(_x,
+					_y,
+					srcX, srcY,
+					width - len,
+					y != 0 ? height - len : height
+				);
+				if (line)
+				{
+					SelectObject(canvasDC, dstPen);
+					DrawRectangle(canvasDC, _x, _y, _w, _h);
+				}
+				srcX += _w;
 			}
 			else
-				DrawImage(len != 0 ? 0 : dstX, y != 0 ? dstY + len : dstY, srcX, srcY, width, height);
-
+			{
+				const int _x = len != 0 ? 0 : dstX;
+				const int _y = y != 0 ? dstY + len : dstY;
+				const int _w = width - len;
+				const int _h = y != 0 ? height - len * 2 : height - len;
+				DrawImage(_x, _y, srcX, srcY, _w + len, _h + len);
+				if (line)
+				{
+					SelectObject(canvasDC, dstPen);
+					DrawRectangle(canvasDC, _x, _y, _w, _h);
+				}
+				srcX += _w;
+			}
 			if (line)
-				DrawRectangle(canvasDC, dstX, dstY, dstX + width, dstY + height, pen);
-
+			{
+				SelectObject(canvasDC, pen);
+				DrawRectangle(canvasDC, dstX, dstY, dstX + width, dstY + height);
+			}
 			dstX += width;
-			srcX += width - len;
 		}
 		dstY += height;
-		srcY += height - len;
+		srcY += height - len * 2;
 	}
 	dw.ReleaseHDC(canvasDC);
 	DeleteObject(hbmp);
 	DeleteDC(compDC);
 	if (pen) DeleteObject(pen);
+	if (dstPen) DeleteObject(dstPen);
 	delete bmp;
 
 	//读取到vector
@@ -298,26 +329,30 @@ bool ImageSlicer::MergeWrite(std::wstring path, int scale, UINT quality)
 		{
 			if (x != 0 && newLength != 0)
 			{
+				const int _w = newClipW - newLength - newLength;
 				WriteImage(dstX, dstY,						 //x,y
 					srcX + newLength,						 //srcX
 					y != 0 ? srcY + newLength : srcY,		 //srcY
-					newClipW - newLength,					 //width
-					y != 0 ? newClipH - newLength : newClipH,//height
+					_w,		 //width
+					y != 0 ? newClipH - newLength  - newLength : newClipH,//height
 					x, y									 //blockX,blockY
 				);
+				dstX += _w;
 			}
 			else
+			{
+				const int _w = newClipW - newLength;
 				WriteImage(dstX, dstY,						 //x,y
 					newLength != 0 ? 0 : srcX,				 //srcX
 					y != 0 ? srcY + newLength : srcY,		 //srcY
-					newClipW, newClipH,						 //width,height
+					_w, newClipH,						 //width,height
 					x, y									 //blockX,blockY
 				);
-
-			dstX += newClipW - newLength;
+				dstX += _w;
+			}
 			srcX += newClipW;
 		}
-		dstY += newClipH - newLength;
+		dstY += newClipH - newLength - newLength;
 		srcY += newClipH;
 	}
 

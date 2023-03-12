@@ -47,7 +47,7 @@ RealESRGan::~RealESRGan()
 void RealESRGan::Infer(const std::wstring& _path, int64_t batch_size) const
 {
 	size_t progress = 0;
-	auto img = imgvideo::ImageSlicer(_path, s_width, s_height, tile_pad, 0.0, false);
+	auto img = imgvideo::ImageSlicer(_path, s_width, s_height, tile_pad, 0.f, false);
 
 	const auto s_len = s_width * s_height;
 	auto& imgRGB = img.data.rgb;

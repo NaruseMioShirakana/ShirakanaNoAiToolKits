@@ -5,6 +5,8 @@
 #define INFERCLASSHEADER namespace InferClass{
 #define INFERCLASSEND }
 
+#define CUDAMOESS 1
+
 namespace AiUI
 {
 	enum class FileType

@@ -447,10 +447,16 @@ namespace AiUI
 			modfile.close();
 			rapidjson::Document modConfigJson;
 			modConfigJson.Parse(modInfoAll.c_str());
-			if (modConfigJson["folder"].Empty() || modConfigJson["type"].Empty())
+			if (modConfigJson["folder"].IsNull() || modConfigJson["type"].IsNull())
 				continue;
+
+			auto _tmpText = to_wide_string(modConfigJson["folder"].GetString());
+			if (_tmpText.empty())
+				continue;
+
+			_tmpText = L" " + _tmpText;
 			_tmpItem = new ListItem;
-			auto _tmpText = L"  " + to_wide_string(modConfigJson["folder"].GetString());
+
 			if (_tmpText.size() > 30)
 				_tmpText = _tmpText.substr(0, 30) + L"...";
 			_tmpItem->SetText(_tmpText);
